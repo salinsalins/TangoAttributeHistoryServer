@@ -19,6 +19,7 @@ from tango import AttrQuality, AttrWriteType, DispLevel, DevState, AttributeInfo
 from tango.server import Device, attribute, command, pipe, device_property
 
 from TangoServerPrototype import TangoServerPrototype, Configuration
+from TangoUtils import config_logger
 
 EMPTY_HISTORY = numpy.empty((0, 2))
 SERVER_CONFIG = ('log_level', 'config_file')
@@ -27,10 +28,10 @@ DEFAULT_ATTRIB_CONFIG = {'ready': False, 'attribute': None, 'device_proxy': None
 
 
 class TangoAttributeHistoryServer(TangoServerPrototype):
-    server_version = '1.0'
+    server_version = '1.1'
     server_name = 'Tango Attribute History Server'
     tango_devices = {}
-    logger = TangoServerPrototype.config_logger()
+    logger = config_logger()
 
     @command(dtype_in=str, dtype_out=str)
     def read_history(self, name):
@@ -254,13 +255,18 @@ class TangoAttributeHistoryServer(TangoServerPrototype):
         except:
             self.log_exception('Attribute %s can not be removed' % name)
 
+    def initialize_dynamic_attributes(self):
+        # self.logger.error('-------- entry -----')
+        self.create_all_attributes()
 
-def post_init_callback():
-    # TangoAttributeHistoryServer.logger.debug('entry')
-    for dev in TangoAttributeHistoryServer.device_list:
-        # TangoAttributeHistoryServer.logger.debug('loop %s', dev)
-        dev.create_all_attributes()
-    # TangoAttributeHistoryServer.logger.debug('exit')
+
+# def post_init_callback():
+#     TangoAttributeHistoryServer.logger.error('***** entry *****')
+#     # TangoAttributeHistoryServer.logger.debug('entry')
+#     for dev in TangoAttributeHistoryServer.device_list:
+#         TangoAttributeHistoryServer.logger.debug('loop %s', dev)
+#         #dev.create_all_attributes()
+#     # TangoAttributeHistoryServer.logger.debug('exit')
 
 
 def read_attribute_history(name, delta_t=None):
