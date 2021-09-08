@@ -19,7 +19,7 @@ from tango import AttrQuality, AttrWriteType, DispLevel, DevState, AttributeInfo
 from tango.server import Device, attribute, command, pipe, device_property
 
 from TangoServerPrototype import TangoServerPrototype, Configuration
-from TangoUtils import config_logger
+from TangoUtils import config_logger, split_attribute_name, convert_polling_status
 
 EMPTY_HISTORY = numpy.empty((0, 2))
 SERVER_CONFIG = ('log_level', 'config_file')
@@ -59,7 +59,15 @@ class TangoAttributeHistoryServer(TangoServerPrototype):
                         self.log_exception('Attribute %s config error' % prop)
             self.config['attributes'] = self.attributes
             TangoAttributeHistoryServer.device_list.append(self)
-            self.logger.info('Device %s has been initiated with %s attributes', self.get_name(), len(self.attributes))
+            msg = 'Device %s has been initiated' % self.get_name()
+            n = len(self.attributes)
+            if n > 1:
+                msg += ' with %s attributes' % n
+            elif n == 1:
+                msg += ' with 1 attribute'
+            else:
+                msg += ' without attributes'
+            self.logger.info(msg)
             self.set_state(DevState.RUNNING)
         except:
             self.log_exception()
@@ -126,7 +134,7 @@ class TangoAttributeHistoryServer(TangoServerPrototype):
             for p in param:
                 conf[p] = param[p]
         try:
-            d_n, a_n = TangoAttributeHistoryServer.split_attribute_name(name)
+            d_n, a_n = split_attribute_name(name)
             conf['device_name'] = d_n
             conf['attribute_name'] = a_n
             # create device proxy
@@ -174,7 +182,7 @@ class TangoAttributeHistoryServer(TangoServerPrototype):
                 self.logger.warning('Polling can not be enabled for %s', name)
                 return conf
             # self.logger.debug('Polling has been restarted for %s', name)
-            p_s = self.convert_polling_status(d_p.polling_status(), a_n)
+            p_s = convert_polling_status(d_p.polling_status(), a_n)
             depth = p_s['depth']
             conf['depth'] = depth
             self.logger.debug('Polling depth for %s is %s', name, depth)
@@ -270,11 +278,11 @@ class TangoAttributeHistoryServer(TangoServerPrototype):
 
 
 def read_attribute_history(name, delta_t=None):
-    logger = TangoAttributeHistoryServer.config_logger()
+    logger = config_logger()
     conf = {}
     history = numpy.empty((0, 2))
     conf['ready'] = False
-    d_n, a_n = TangoAttributeHistoryServer.split_attribute_name(name)
+    d_n, a_n = split_attribute_name(name)
     conf['device_name'] = d_n
     conf['attribute_name'] = a_n
     d_p = tango.DeviceProxy(d_n)
@@ -285,7 +293,7 @@ def read_attribute_history(name, delta_t=None):
             return history
         # test if device is alive
         d_p.ping()
-        p_s = TangoAttributeHistoryServer.convert_polling_status(d_p.polling_status(), a_n)
+        p_s = convert_polling_status(d_p.polling_status(), a_n)
         a = 'depth'
         if p_s[a] <= 0:
             logger.debug('Polling is disabled for %s', name)
@@ -317,7 +325,8 @@ def read_attribute_history(name, delta_t=None):
 
 
 if __name__ == "__main__":
-    TangoAttributeHistoryServer.run_server(post_init_callback=post_init_callback)
+    # TangoAttributeHistoryServer.run_server(post_init_callback=post_init_callback)
+    TangoAttributeHistoryServer.run_server()
     # an = 'sys/tg_test/1/double_scalar'
     # a = read_attribute_history(an)
     # print(a, a[:, 1].ptp())
